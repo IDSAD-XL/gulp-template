@@ -1,5 +1,6 @@
 let project_folder = require('path').basename(__dirname);
 let source_folder = '#src';
+const { deepStrictEqual } = require('assert');
 let fs = require('fs');
 
 let path = {
@@ -23,7 +24,8 @@ let path = {
 		js: source_folder + "/js/**/*.js",
 		img: source_folder + "/img/**/*.{jpg,png,svg,gif,ico,webp}",
 	},
-	clean: "./" + project_folder + "/"
+	clean: "./" + project_folder + "/",
+	cleanFonts: "./" + source_folder + "/sass/_fonts.sass"
 }
 
 let { src, dest } = require('gulp'),
@@ -44,7 +46,8 @@ let { src, dest } = require('gulp'),
 	pngquant = require('imagemin-pngquant'),      //Подключение для работы с png
 	cache = require('gulp-cache'),                //Подключение кеширования
 	autoprefixer = require('gulp-autoprefixer'),  //Подключение автопрефиксера 
-	group_media = require('gulp-group-css-media-queries');
+	group_media = require('gulp-group-css-media-queries'),
+	tildeImporter = require('node-sass-tilde-importer');
 
 function browserSync(params) {
 	browsersync.init({
@@ -79,7 +82,9 @@ function js() {
 
 function css() {
 	return src(path.src.css)
-		.pipe(sass())
+		.pipe(sass({
+			importer: tildeImporter
+		}))
 		.pipe(group_media())
 		.pipe(
 			autoprefixer({
@@ -132,22 +137,20 @@ gulp.task('otf2ttf', function () {
 function fontsStyle(params) {
 
 	let file_content = fs.readFileSync(source_folder + '/sass/_fonts.sass');
-	if (file_content == '') {
-		fs.writeFile(source_folder + '/sass/_fonts.sass', '', cb);
-		return fs.readdir(path.build.fonts, function (err, items) {
-			if (items) {
-				let c_fontname;
-				for (var i = 0; i < items.length; i++) {
-					let fontname = items[i].split('.');
-					fontname = fontname[0];
-					if (c_fontname != fontname) {
-						fs.appendFile(source_folder + '/sass/_fonts.sass', '@include font("' + fontname + '", "' + fontname + '", "400", "normal")\r\n', cb);
-					}
-					c_fontname = fontname;
+	fs.writeFile(source_folder + '/sass/_fonts.sass', '', cb);
+	return fs.readdir(path.build.fonts, function (err, items) {
+		if (items) {
+			let c_fontname;
+			for (var i = 0; i < items.length; i++) {
+				let fontname = items[i].split('.');
+				fontname = fontname[0];
+				if (c_fontname != fontname) {
+					fs.appendFile(source_folder + '/sass/_fonts.sass', '@include font("' + fontname + '", "' + fontname + '", "400", "normal")\r\n', cb);
 				}
+				c_fontname = fontname;
 			}
-		})
-	}
+		}
+	})
 }
 
 function cb() { }
